@@ -11,11 +11,6 @@ import os
 import matplotlib.pylab as plt
 
 
-
-LR=0.005
-BATCH_SIZE=128
-eps = np.finfo(float).eps
-
 '''
 Classes:
 0) 4-QAM,
@@ -26,10 +21,10 @@ def get_loss_optimizer(net,learning_rate=0.001):
         #Loss
         loss = torch.nn.CrossEntropyLoss()
         #Optimizer
-        optimizer = optim.Adam(net.parameters(), lr= learning_rate)
+        optimizer = optim.SGD(net.parameters(), lr= learning_rate, momentum=0.9)
 
         return(loss, optimizer)
-def test_net(test_set = None,mods = None,snrs = None, path= '/home/kiran/radio_modulation/pytorch/new/model.pt', batch_size= BATCH_SIZE,fname=None):  
+def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_size= 128, fname=None):  
     
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, num_workers=2)
     n_batches = len(test_loader)
@@ -42,7 +37,7 @@ def test_net(test_set = None,mods = None,snrs = None, path= '/home/kiran/radio_m
     net.eval()
     #writing results to spreadsheet
     if fname is None:
-        fname = "test_pred.csv"
+        fname = 'test_pred.csv'
     f_out = open(fname,"w")
     wrt = csv.writer(f_out)
 
@@ -76,7 +71,7 @@ def to_onehot(yy):
     return yy1
 
 
-def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=BATCH_SIZE, n_epochs=5 ,learning_rate = LR):
+def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epochs=5 ,learning_rate = 0.001,fname = None):
     #Print all of the hyperparameters of the training iteration:
     print("===== HYPERPARAMETERS =====")
     print("batch_size=", batch_size)
@@ -85,7 +80,6 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=BATCH_SIZE,
     print("=" * 30)
     
     #Get training and test data 
-    #train_loader,test_loader,val_loader = get_data(batch_size,x,y)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size= batch_size, num_workers=2)
     n_batches = len(train_loader)
 
@@ -97,7 +91,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=BATCH_SIZE,
     #Time for printing
     training_start_time = time.time()
     
-    f_out = open("train_lossvepoch.csv","w")
+    f_out = open(fname,"w")
     wrt = csv.writer(f_out)
     
     total_train_loss = 0
@@ -126,7 +120,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=BATCH_SIZE,
             optimizer.zero_grad()
             #Forward pass, backward pass, optimize
             outputs = net(inputs)
-            #print(outputs.shape)
+            
             loss_size = loss(outputs, np.argmax(labels,axis=1))
             loss_size.backward()
             optimizer.step()
@@ -163,30 +157,39 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=BATCH_SIZE,
         print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
         '''     
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
-    torch.save(net,'/home/kiran/radio_modulation/pytorch/new/model.pt')
+    torch.save(net,'model.pt')
     f_out.close()
     
 
 if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("--train", action="store_true",help="Train the model")
+        parser.add_argument("--steps", type=int, help="Number of epochs")
+        parser.add_argument("--batch_size", type=int, help="Batch Size")
+        parser.add_argument("--file_train", type=str, help="Path to input data")
+        parser.add_argument("--file_test", type=str, help="Path to input test data")
+        parser.add_argument("--filts", type=str, help="Filters")
+        parser.add_argument("--learning_rate", type=float, help="Learning Rate")
+        parser.add_argument("--results", type=str, help="Path to save results")
         args = parser.parse_args()
-        filts =  [64]*7 + [512, 512, 2]
+        
+        filts = []
 
+        if args.filts is not None:
+            filts = [int(x) for x in args.filts.split(",")]
         #Set up neural network
         nn = vgg(filts)
         
-
         if(args.train):
             #Training data
-            file = "/home/kiran/radio_modulation/pytorch/new/qam_data.pkl"
-            data = pickle.load(open(os.path.expanduser(file), "rb"), encoding ='latin1')
+            file_name = args.file_train 
+            data = pickle.load(open(file_name, "rb"), encoding ='latin1')
             mods,snrs = map(lambda j: sorted(list(set(map(lambda x: x[j], data.keys())))), [0,1])
             x = []  
             lbl = []
             classes = []
             sns = []
-
+            
             for mod in mods:
                 for snr in snrs:
                     x.append(data[(mod,snr)])
@@ -198,13 +201,12 @@ if __name__ == '__main__':
             x = np.vstack(x)
             classes = to_onehot(classes)
             
-            train_net(x,classes,sns,nn,BATCH_SIZE, 1000, LR)
+            train_net(x,classes,sns,nn,args.batch_size, args.steps, args.learning_rate,args.results)
                     
         else:
             #Testing Data
             
-            file_test = "/home/kiran/radio_modulation/pytorch/new/qam_data_test.pkl"
-            data_test = pickle.load(open(os.path.expanduser(file_test), "rb"), encoding ='latin1')
+            data_test = pickle.load(open(os.path.expanduser(args.file_test), "rb"), encoding ='latin1')
             mods,snrs = map(lambda j: sorted(list(set(map(lambda x: x[j], data_test.keys())))), [0,1])
             
             x = []  
@@ -220,9 +222,8 @@ if __name__ == '__main__':
                         sns.append(snr)
             classes = to_onehot(classes)
             x = np.vstack(x)
-            #print(x.shape)
-            path = '/home/kiran/radio_modulation/pytorch/new/model.pt'
-            test_net(x,classes,sns,path,BATCH_SIZE,'test_pred.csv')
+            path = 'model.pt'
+            test_net(x,classes,sns,path,args.batch_size,'test_pred.csv')
         
         
 
