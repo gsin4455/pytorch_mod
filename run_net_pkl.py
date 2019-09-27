@@ -71,7 +71,7 @@ def to_onehot(yy):
     return yy1
 
 
-def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epochs=5 ,learning_rate = 0.001,fname = None):
+def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epochs=5 ,learning_rate = 0.001,fname = None,saved_model=None):
     #Print all of the hyperparameters of the training iteration:
     print("===== HYPERPARAMETERS =====")
     print("batch_size=", batch_size)
@@ -157,7 +157,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
         print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
         '''     
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
-    torch.save(net,'model.pt')
+    torch.save(net,saved_model)
     f_out.close()
     
 
@@ -171,6 +171,7 @@ if __name__ == '__main__':
         parser.add_argument("--filts", type=str, help="Filters")
         parser.add_argument("--learning_rate", type=float, help="Learning Rate")
         parser.add_argument("--results", type=str, help="Path to save results")
+        parser.add_argument("--model_path", type=str, help="Saved model")
         args = parser.parse_args()
         
         filts = []
@@ -201,7 +202,7 @@ if __name__ == '__main__':
             x = np.vstack(x)
             classes = to_onehot(classes)
             
-            train_net(x,classes,sns,nn,args.batch_size, args.steps, args.learning_rate,args.results)
+            train_net(x,classes,sns,nn,args.batch_size, args.steps, args.learning_rate,args.results,args.model_path)
                     
         else:
             #Testing Data
@@ -222,7 +223,7 @@ if __name__ == '__main__':
                         sns.append(snr)
             classes = to_onehot(classes)
             x = np.vstack(x)
-            path = 'model.pt'
+            path = args.model_path
             test_net(x,classes,sns,path,args.batch_size,'test_pred.csv')
         
         
