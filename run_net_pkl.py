@@ -9,6 +9,7 @@ import csv
 import pickle
 import os
 import matplotlib.pylab as plt
+from resnet import * 
 
 
 '''
@@ -126,13 +127,14 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
             optimizer.step()
             
             #Print statistics
+            
             running_loss += loss_size.data
             total_train_loss += loss_size.data
 
-            #Print every 10th batch of an epoch
+            #Print loss from every 10% (then resets to 0) of a batch of an epoch
             if (i + 1) % (print_every + 1) == 0:
                 print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
-                        epoch+1, int(100 * (i+1) / n_batches),total_train_loss , time.time() - start_time))
+                        epoch+1, int(100 * (i+1) / n_batches), running_loss/print_every , time.time() - start_time))
                 #Reset running loss and time
                 running_loss = 0.0
                 start_time = time.time()
@@ -172,14 +174,18 @@ if __name__ == '__main__':
         parser.add_argument("--learning_rate", type=float, help="Learning Rate")
         parser.add_argument("--results", type=str, help="Path to save results")
         parser.add_argument("--model_path", type=str, help="Saved model")
+        parser.add_argument("--gpus",type=str, help = "GPU's to use")
         args = parser.parse_args()
+        
+        if args.gpus is not None:
+            os.environ["CUDA_VISIBLE_DEVICES"]=args.gpus
         
         filts = []
 
         if args.filts is not None:
             filts = [int(x) for x in args.filts.split(",")]
         #Set up neural network
-        nn = vgg(filts)
+        nn = ResNet18()
         
         if(args.train):
             #Training data
