@@ -180,6 +180,8 @@ if __name__ == '__main__':
         if args.gpus is not None:
             os.environ["CUDA_VISIBLE_DEVICES"]=args.gpus
         
+        args = parser.parse_args()
+        
         filts = []
 
         if args.filts is not None:
@@ -229,6 +231,7 @@ if __name__ == '__main__':
                         sns.append(snr)
             classes = to_onehot(classes)
             x = np.vstack(x)
+            
             path = args.model_path
             test_net(x,classes,sns,path,args.batch_size,'test_pred.csv')
         
