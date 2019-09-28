@@ -110,7 +110,13 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
          
         iter_lbl = iter(lbl_loader)  
         iter_snr = iter(snr_loader) 
-            
+        
+        if ((epoch+1) % 250):
+            checkpoint = {'model':net,
+                'state_dict': net.state_dict(),
+                'optimizer' : optimizer.state_dict()}
+            file_name = 'checkpoint.pt'
+            torch.save(checkpoint, file_name)    
         
         for i,inputs in enumerate(train_loader,0):
             labels = iter_lbl.next()
@@ -159,7 +165,12 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
         print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
         '''     
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
-    torch.save(net,saved_model)
+    final = {'model':net,
+          'state_dict': net.state_dict(),
+          'optimizer' : optimizer.state_dict()}
+
+    torch.save(final, saved_model)
+    #torch.save(net,saved_model)
     f_out.close()
     
 
