@@ -21,9 +21,10 @@ Classes:
 def get_loss_optimizer(net,learning_rate=0.001):
         #Loss
         loss = torch.nn.CrossEntropyLoss()
+        
         #Optimizer
-        optimizer = optim.SGD(net.parameters(), lr= learning_rate, momentum=0.9)
-
+        #optimizer = optim.SGD(net.parameters(), lr= learning_rate)
+        optimizer  = optim.Adam(net.parameters(),lr = learning_rate)
         return(loss, optimizer)
 
 def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_size= 128, fname=None):  
@@ -59,9 +60,21 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
         snr = iter_snr.next()
         inputs,labels,snr = Variable(inputs), Variable(labels), Variable(snr)
         pred = net(inputs)
+        
+
+
+        c = 0
+        if (pred.shape[1] > 2):
+            c = 1
+        
         pred = np.argmax(pred,axis =1)
         labels = np.argmax(labels.numpy(),axis=1)
         for s,p,l in zip(snr,pred,labels):
+            if(c == 1):
+                if(p > 15):
+                    p = 1
+                else:
+                    p = 0
             if(p == l):
                 corr_cnt += 1
             wrt.writerow([s,p,l])
@@ -132,6 +145,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
             outputs = net(inputs)
             
             loss_size = loss(outputs, np.argmax(labels,axis=1))
+            #loss_size = loss_size.exp()
             loss_size.backward()
             optimizer.step()
             
@@ -142,7 +156,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
 
             #Print loss from every 10% (then resets to 0) of a batch of an epoch
             if (i + 1) % (print_every + 1) == 0:
-                print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
+                print("Epoch {}, {:d}% \t train_loss: {:.4f} took: {:.2f}s".format(
                         epoch+1, int(100 * (i+1) / n_batches), total_train_loss , time.time() - start_time))
                 #Reset running loss and time
                 running_loss = 0.0
@@ -205,9 +219,14 @@ if __name__ == '__main__':
 
         
         if(args.train):
+            '''
             #Training data
-           
+            model = torch.load('model_p.pt')
+            net = model['model']
+            net.load_state_dict(model['state_dict'])
+            '''
             nn = ResNet18(args.classes)
+            #nn = vgg(filts)
             file_name = args.file_train 
             data = pickle.load(open(file_name, "rb"), encoding ='latin1')
             mods,snrs = map(lambda j: sorted(list(set(map(lambda x: x[j], data.keys())))), [0,1])

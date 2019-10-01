@@ -12,7 +12,7 @@ class vgg(nn.Module):
     def __init__(self, filts):
         super(vgg, self).__init__()
         self.features = self._make_layers(filts[0:7],IN_CHAN)
-        self.dense  = self._make_denselayers(filts[7:9], 8640)
+        self.dense  = self._make_denselayers(filts[7:9], 1472)
         self.fc = nn.Linear(filts[8],filts[9])
 
     def forward(self, x):

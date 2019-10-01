@@ -24,11 +24,11 @@ C = np.array([-2.0-2.0j, 2.0-2.0j,2.0+2.0j, -2.0+2.0j], dtype=np.complex64)
 
 #generate vector with certain proportion of 8-QAM\4-QAM and level of noise
 
-def vec(p=None, snr= 0,bin =True):
-    #vector of shape [1,128]
+def vec(p=None, snr= 0,binary =True):
+    #vector of shape [1,spv]
     #generate collection of symbols
 
-    if(bin == True):
+    if(binary == True):
         if (p == 0):
             vec = random.choices(A,k=spv)
         elif(p == 1):
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     
     dataset = {}
     dataset_p = {}
-    loops = int(spv*2)
+    loops = int(spv*16)
     #f,ax = plt.subplots(2,1, constrained_layout=True)
     #Generating normal labelled dataset for binary classifer
     for i in range(loops):
@@ -78,15 +78,15 @@ if __name__ == "__main__":
     for i in range(int(loops/8)):
         for p in range(0,spv):
             for s in range (-20,20,2):
-                dataset_p[(p, s)] = np.zeros([int(loops/8), 2, spv], dtype=np.float32)
+                dataset_p[(p, s)] = np.zeros([loops, 2, spv], dtype=np.float32)
                 out = vec(p,s,False)
                 dataset_p[(p,s)][i,0,:] = np.real(out)
                 dataset_p[(p,s)][i,1,:] = np.imag(out)
                 #print(p,s)
 
     print("Writing data to file")
-    pickle.dump( dataset, open("qam_data_test.pkl", "wb" ) )
-    pickle.dump( dataset_p, open("qam_data_p_test.pkl", "wb" ) )
+    pickle.dump( dataset, open("qam_data.pkl", "wb" ) )
+    pickle.dump( dataset_p, open("qam_data_p.pkl", "wb" ) )
 
 
        
