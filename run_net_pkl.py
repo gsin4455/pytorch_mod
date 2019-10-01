@@ -25,6 +25,7 @@ def get_loss_optimizer(net,learning_rate=0.001):
         optimizer = optim.SGD(net.parameters(), lr= learning_rate, momentum=0.9)
 
         return(loss, optimizer)
+
 def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_size= 128, fname=None):  
     
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, num_workers=2)
@@ -33,9 +34,15 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
     lbl_loader = torch.utils.data.DataLoader(mods, batch_size= batch_size, num_workers=2) 
     snr_loader = torch.utils.data.DataLoader(snrs, batch_size= batch_size, num_workers=2)
 
-    net = vgg(filts)
-    net = torch.load(path)
+    #net = ResNet18()
+    model = torch.load(path)
+    net = model['model']
+    net.load_state_dict(model['state_dict'])
+    for par in net.parameters():
+        par.requires_grad = False
+    print(net)
     net.eval()
+    
     #writing results to spreadsheet
     if fname is None:
         fname = 'test_pred.csv'
@@ -53,13 +60,14 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
         snr = iter_snr.next()
         inputs,labels,snr = Variable(inputs), Variable(labels), Variable(snr)
         pred = net(inputs)
-        snr = snr.numpy()
-        pred = pred.detach().numpy()
-        labels = labels.numpy()
-        
+        pred = np.argmax(pred,axis =1)
+        #snr = snr.numpy()
+        #pred = pred.detach().numpy()
+        labels = np.argmax(labels.numpy(),axis=1)
+
         for s,p,l in zip(snr,pred,labels):
            # print(s,p,l)
-            if(np.equal(p,l).all()):
+            if(p == l):
                 corr_cnt += 1
             wrt.writerow([s,p,l])
             total_iter +=1 
@@ -111,7 +119,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
         iter_lbl = iter(lbl_loader)  
         iter_snr = iter(snr_loader) 
         
-        if ((epoch+1) % 250):
+        if (((epoch+1) % 250) == 0):
             checkpoint = {'model':net,
                 'state_dict': net.state_dict(),
                 'optimizer' : optimizer.state_dict()}
@@ -186,6 +194,7 @@ if __name__ == '__main__':
         parser.add_argument("--results", type=str, help="Path to save results")
         parser.add_argument("--model_path", type=str, help="Saved model")
         parser.add_argument("--gpus",type=str, help = "GPU's to use")
+        parser.add_argument("--classes", type=int, help= "Number of output classes")
         args = parser.parse_args()
         
         if args.gpus is not None:
@@ -198,10 +207,12 @@ if __name__ == '__main__':
         if args.filts is not None:
             filts = [int(x) for x in args.filts.split(",")]
         #Set up neural network
-        nn = ResNet18()
+
         
         if(args.train):
             #Training data
+           
+            nn = ResNet18(args.classes)
             file_name = args.file_train 
             data = pickle.load(open(file_name, "rb"), encoding ='latin1')
             mods,snrs = map(lambda j: sorted(list(set(map(lambda x: x[j], data.keys())))), [0,1])
