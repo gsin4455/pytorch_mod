@@ -40,7 +40,6 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
     net.load_state_dict(model['state_dict'])
     for par in net.parameters():
         par.requires_grad = False
-    print(net)
     net.eval()
     
     #writing results to spreadsheet
@@ -61,12 +60,8 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
         inputs,labels,snr = Variable(inputs), Variable(labels), Variable(snr)
         pred = net(inputs)
         pred = np.argmax(pred,axis =1)
-        #snr = snr.numpy()
-        #pred = pred.detach().numpy()
         labels = np.argmax(labels.numpy(),axis=1)
-
         for s,p,l in zip(snr,pred,labels):
-           # print(s,p,l)
             if(p == l):
                 corr_cnt += 1
             wrt.writerow([s,p,l])
@@ -148,7 +143,7 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
             #Print loss from every 10% (then resets to 0) of a batch of an epoch
             if (i + 1) % (print_every + 1) == 0:
                 print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
-                        epoch+1, int(100 * (i+1) / n_batches), running_loss/print_every , time.time() - start_time))
+                        epoch+1, int(100 * (i+1) / n_batches), total_train_loss , time.time() - start_time))
                 #Reset running loss and time
                 running_loss = 0.0
                 start_time = time.time()
@@ -239,7 +234,7 @@ if __name__ == '__main__':
             
             data_test = pickle.load(open(os.path.expanduser(args.file_test), "rb"), encoding ='latin1')
             mods,snrs = map(lambda j: sorted(list(set(map(lambda x: x[j], data_test.keys())))), [0,1])
-            
+            #print(mods) 
             x = []  
             lbl = []
             classes= []

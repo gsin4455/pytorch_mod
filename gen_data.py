@@ -14,7 +14,7 @@ Classes:
 '''
 
 sps = 8
-spv = 128
+spv = 16
 #vec_len = sps*spv #1024
 
 A = np.array([-1.0-1.0j,1.0-1.0j, -1.0+1.0j, 1.0+1.0j], dtype=np.complex64)
@@ -75,20 +75,18 @@ if __name__ == "__main__":
 
     #plt.show()
     #Generate probability labelled dataset 
-    for i in range(int(loops/64)):
+    for i in range(int(loops/8)):
         for p in range(0,spv):
             for s in range (-20,20,2):
-                dataset_p[(p, s)] = np.zeros([int(loops/64), 2, spv], dtype=np.float32)
+                dataset_p[(p, s)] = np.zeros([int(loops/8), 2, spv], dtype=np.float32)
                 out = vec(p,s,False)
                 dataset_p[(p,s)][i,0,:] = np.real(out)
                 dataset_p[(p,s)][i,1,:] = np.imag(out)
                 #print(p,s)
 
-    # output is of shape (10240, 2, 128)
-
     print("Writing data to file")
-    pickle.dump( dataset, open("qam_data.pkl", "wb" ) )
-    pickle.dump( dataset_p, open("qam_data_p.pkl", "wb" ) )
+    pickle.dump( dataset, open("qam_data_test.pkl", "wb" ) )
+    pickle.dump( dataset_p, open("qam_data_p_test.pkl", "wb" ) )
 
 
        

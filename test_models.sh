@@ -9,5 +9,5 @@ python3 run_net_pkl.py --file_test $DATA_DIR/qam_data_test.pkl --batch_size $BAT
 
 
 #run inference with n nary classifier
-python3 run_net_pkl.py --file_test $DATA_DIR/qam_data_test.pkl --batch_size $BATCH_SIZE --results "test_result_p.csv" --model_path $DATA_DIR/model_p.pt --gpus $GPUS
+python3 run_net_pkl.py --file_test $DATA_DIR/qam_data_p_test.pkl --batch_size $BATCH_SIZE --results "test_result_p.csv" --model_path $DATA_DIR/model_p.pt --gpus $GPUS
 
