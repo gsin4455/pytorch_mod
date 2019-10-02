@@ -42,8 +42,8 @@ def vec(p=None, snr= 0,binary =True):
     #add noise
     s = 10**(snr/10)
     pn = 1.0/s
-    noise_real = np.sqrt(pn/4)*np.random.randn(spv)
-    noise_imag = np.sqrt(pn/4)*np.random.randn(spv)
+    noise_real = np.sqrt(pn/8)*np.random.randn(spv)
+    noise_imag = np.sqrt(pn/8)*np.random.randn(spv)
     vec += noise_real + noise_imag*1j
 
     return vec
@@ -53,13 +53,13 @@ if __name__ == "__main__":
     
     dataset = {}
     dataset_p = {}
-    loops = int(spv*16)
+    loops = int(spv*8)
     #f,ax = plt.subplots(2,1, constrained_layout=True)
     #Generating normal labelled dataset for binary classifer
     for i in range(loops):
         for m in mod:
             for s in range(-20,20,2):
-                dataset[(m, s)] = np.zeros([loops, 2, spv], dtype=np.float32)
+                dataset[(m, s)] = np.zeros([loops, 2, spv], dtype=np.float64)
                 out = vec(m,s,True)
                 dataset[(m,s)][i,0,:] = np.real(out)
                 dataset[(m,s)][i,1,:] = np.imag(out)
@@ -75,18 +75,18 @@ if __name__ == "__main__":
 
     #plt.show()
     #Generate probability labelled dataset 
-    for i in range(int(loops/8)):
+    for i in range(int(loops/4)):
         for p in range(0,spv):
             for s in range (-20,20,2):
-                dataset_p[(p, s)] = np.zeros([loops, 2, spv], dtype=np.float32)
+                dataset_p[(p, s)] = np.zeros([int(loops/4), 2, spv], dtype=np.float64)
                 out = vec(p,s,False)
                 dataset_p[(p,s)][i,0,:] = np.real(out)
                 dataset_p[(p,s)][i,1,:] = np.imag(out)
                 #print(p,s)
 
     print("Writing data to file")
-    pickle.dump( dataset, open("qam_data.pkl", "wb" ) )
-    pickle.dump( dataset_p, open("qam_data_p.pkl", "wb" ) )
+    pickle.dump( dataset, open("qam_data_test.pkl", "wb" ) )
+    pickle.dump( dataset_p, open("qam_data_p_test.pkl", "wb" ) )
 
 
        

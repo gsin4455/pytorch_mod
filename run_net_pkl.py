@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 import time
 from vgg import vgg 
 from torch.autograd import Variable
@@ -10,7 +11,7 @@ import pickle
 import os
 import matplotlib.pylab as plt
 from resnet import * 
-
+from torch.utils.data.sampler import SubsetRandomSampler
 
 '''
 Classes:
@@ -21,10 +22,10 @@ Classes:
 def get_loss_optimizer(net,learning_rate=0.001):
         #Loss
         loss = torch.nn.CrossEntropyLoss()
-        
+        #loss = torch.nn.MSELoss()
         #Optimizer
-        #optimizer = optim.SGD(net.parameters(), lr= learning_rate)
-        optimizer  = optim.Adam(net.parameters(),lr = learning_rate)
+        #optimizer  = optim.Adam(net.parameters(),lr = learning_rate)
+        optimizer = optim.SGD(net.parameters(),lr=learning_rate)
         return(loss, optimizer)
 
 def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_size= 128, fname=None):  
@@ -60,8 +61,6 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
         snr = iter_snr.next()
         inputs,labels,snr = Variable(inputs), Variable(labels), Variable(snr)
         pred = net(inputs)
-        
-
 
         c = 0
         if (pred.shape[1] > 2):
@@ -70,14 +69,18 @@ def test_net(test_set = None,mods = None,snrs = None, path= 'model.pt', batch_si
         pred = np.argmax(pred,axis =1)
         labels = np.argmax(labels.numpy(),axis=1)
         for s,p,l in zip(snr,pred,labels):
+            
+            wrt.writerow([s,p,l])
+            
             if(c == 1):
-                if(p > 15):
+                if(p > 8):
                     p = 1
                 else:
                     p = 0
+            
             if(p == l):
                 corr_cnt += 1
-            wrt.writerow([s,p,l])
+
             total_iter +=1 
     print("Test done, accr = :" + str(corr_cnt/total_iter))
     f_out.close()
@@ -96,12 +99,31 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
     print("learning_rate=", learning_rate)
     print("=" * 30)
     
+    validation_split = .2
+    shuffle_dataset = True
+    random_seed= 42
+
+    # Creating data indices for training and validation splits:
+    
+    dataset_size = train_set.shape[0]
+    
+    indices = list(range(dataset_size))
+    split = int(np.floor(validation_split * dataset_size))
+    if shuffle_dataset :
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+        train_indices, val_indices = indices[split:], indices[:split]
+
+        # Creating PT data samplers and loaders:
+        train_sampler = SubsetRandomSampler(train_indices)
+        valid_sampler = SubsetRandomSampler(val_indices)
+
     #Get training and test data 
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size= batch_size, num_workers=2)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size= batch_size,sampler=train_sampler, num_workers=2)
     n_batches = len(train_loader)
 
-    lbl_loader = torch.utils.data.DataLoader(lbl, batch_size= batch_size, num_workers=2)
-    snr_loader = torch.utils.data.DataLoader(snr, batch_size= batch_size, num_workers=2)
+    lbl_loader = torch.utils.data.DataLoader(lbl, batch_size= batch_size, num_workers=2,sampler =train_sampler)
+    snr_loader = torch.utils.data.DataLoader(snr, batch_size= batch_size, num_workers=2,sampler=train_sampler)
     #Create our loss and optimizer functions
     loss, optimizer = get_loss_optimizer(net, learning_rate)
     
@@ -113,6 +135,9 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
     
     total_train_loss = 0
 
+    scheduler = StepLR(optimizer, step_size=250, gamma=0.1)
+    
+    net = net.double()
     #Loop for n_epochs
     for epoch in range(n_epochs):
         
@@ -142,10 +167,10 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
             #Set the parameter gradients to zero
             optimizer.zero_grad()
             #Forward pass, backward pass, optimize
-            outputs = net(inputs)
-            
+            outputs = net(inputs.double())
+            labels = labels.squeeze_()
+            #labels = labels.float()
             loss_size = loss(outputs, np.argmax(labels,axis=1))
-            #loss_size = loss_size.exp()
             loss_size.backward()
             optimizer.step()
             
@@ -162,32 +187,31 @@ def train_net(train_set=None,lbl=None,snr=None, net=None, batch_size=128, n_epoc
                 running_loss = 0.0
                 start_time = time.time()
                 
-        '''
+        
         #At the end of the epoch, do a pass on the validation set
         total_val_loss = 0
-     
+        val_loader = torch.utils.data.DataLoader(train_set, batch_size= batch_size, num_workers=2,sampler=valid_sampler)
+        val_lbl_loader = torch.utils.data.DataLoader(lbl, batch_size= batch_size, num_workers=2,sampler = valid_sampler)
+        iter_lblval = iter(val_lbl_loader)
         
-        for inputs, labels, snr in enumerate(val_loader,0):
-            print("invalidation")  
+        for i,inputs in enumerate(val_loader,0):
             #Wrap tensors in Variables
-            inputs, labels,snr = Variable(inputs), Variable(labels), Variable(snr)
-            
+            inputs, labels = Variable(inputs), Variable(labels)
+            labels = iter_lblval.next()
             #Forward pass
-            val_outputs = net(inputs)
-            val_loss_size = loss(val_outputs, labels)
-            total_val_loss += val_loss_size.data[0]
+            val_outputs = net(inputs.double())
+            val_loss_size = loss(val_outputs, np.argmax(labels,axis=1))
+            total_val_loss += val_loss_size.data
 
-            #Do anything with this result?
-            
         print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
-        '''     
+        scheduler.step()
+    
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
     final = {'model':net,
           'state_dict': net.state_dict(),
           'optimizer' : optimizer.state_dict()}
 
     torch.save(final, saved_model)
-    #torch.save(net,saved_model)
     f_out.close()
     
 
@@ -219,11 +243,11 @@ if __name__ == '__main__':
 
         
         if(args.train):
-            '''
+            ''' 
             #Training data
-            model = torch.load('model_p.pt')
-            net = model['model']
-            net.load_state_dict(model['state_dict'])
+            model = torch.load('checkpoint.pt')
+            nn = model['model']
+            nn.load_state_dict(model['state_dict'])
             '''
             nn = ResNet18(args.classes)
             #nn = vgg(filts)
@@ -245,7 +269,7 @@ if __name__ == '__main__':
 
             x = np.vstack(x)
             classes = to_onehot(classes)
-            
+            print(x.shape)         
             train_net(x,classes,sns,nn,args.batch_size, args.steps, args.learning_rate,args.results,args.model_path)
                     
         else:
