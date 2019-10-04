@@ -44,37 +44,6 @@ Classes:
 
 
 
-
-'''
-transform = transforms.Compose(
-[transforms.ToTensor(),
-transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                        shuffle=True, num_workers=2)
-
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                        shuffle=False, num_workers=2)
-
-classes = ('plane', 'car', 'bird', 'cat',
-        'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-'''
-
-
-
-def get_data(batch_size, train_set,test_set):
-        train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=2)
-        #Test and validation loaders have constant batch sizes, so we can define them directly
-
-
-            
-        return(train_loader, test_loader,val_loader)
-
-
 def get_loss_optimizer(net,learning_rate=0.001):
     #We change optimizer here - Euclidean vs. Hyperbolic vs. Product Space
         #Loss
@@ -83,6 +52,7 @@ def get_loss_optimizer(net,learning_rate=0.001):
         optimizer = optim.Adam(net.parameters(), lr= learning_rate)
 
         return(loss, optimizer)
+
 def test_net(test_set, path, batch_size= BATCH_SIZE):
     #run test loop here
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, num_workers=2)
@@ -221,12 +191,9 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("--train", action="store_true",help="Test the model on this dataset")
         args = parser.parse_args()
-        filts =  [64]*7 + [512, 512, 24]
         filename = '/home/kiran/radio_modulation/pytorch/qam_train.hdf5'
         x = h5py.File(filename, 'r')
-
-        filename_test = '/home/kiran/radio_modulation/pytorch/qam_test.hdf5'
-        test = h5py.File(filename_test,'r')
+        
             
         # List all groups
         #print("Keys: %s" % f.keys())

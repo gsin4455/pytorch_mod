@@ -2,10 +2,8 @@ from __future__ import division
 
 import numpy as np
 import random
-import pickle
 import matplotlib.pylab as plt
-
-
+import h5py
 
 '''
 Classes:
@@ -13,8 +11,8 @@ Classes:
 1) 8-QAM
 '''
 
-sps = 8
-spv = 16
+sps = 128
+spv = 8
 #vec_len = sps*spv #1024
 
 A = np.array([-1.0-1.0j,1.0-1.0j, -1.0+1.0j, 1.0+1.0j], dtype=np.complex64)
@@ -30,20 +28,20 @@ def vec(p=None, snr= 0,binary =True):
 
     if(binary == True):
         if (p == 0):
-            vec = random.choices(A,k=spv)
+            vec = random.choices(A,k=spv*sps)
         elif(p == 1):
-            vec = random.choices(B,k=spv)
+            vec = random.choices(B,k=spv*sps)
     
     else:
-        a = random.choices(A,k=spv-p)
-        c = random.choices(C,k=p)
+        a = random.choices(A,k=(spv-p)*sps)
+        c = random.choices(C,k=p*sps)
         vec = [x.pop(0) for x in random.sample([a]*len(a) + [c]*len(c), len(a)+len(c))]
 
     #add noise
     s = 10**(snr/10)
     pn = 1.0/s
-    noise_real = np.sqrt(pn/8)*np.random.randn(spv)
-    noise_imag = np.sqrt(pn/8)*np.random.randn(spv)
+    noise_real = np.sqrt(pn/4)*np.random.randn(spv*sps)
+    noise_imag = np.sqrt(pn/4)*np.random.randn(spv*sps)
     vec += noise_real + noise_imag*1j
 
     return vec
@@ -51,18 +49,31 @@ def vec(p=None, snr= 0,binary =True):
 if __name__ == "__main__":
     mod = [0,1]
     
-    dataset = {}
-    dataset_p = {}
-    loops = int(spv*8)
+
+    loops = int(spv*512)
+    
+    
+    dataset = np.zeros([loops*2*26,1024,2],dtype=np.float64)
+    labels = np.zeros([loops*2*26,2], dtype=int)
+    snrs = np.zeros([loops*2*26,1],dtype=int)
+    
+    dataset_p = np.zeros([loops*2*26,1024,2],dtype=np.float64)
+    labels_p = np.zeros([loops*2*26,2], dtype=int)
+    snrs_p = np.zeros([loops*2*26,1],dtype=int)
+
     #f,ax = plt.subplots(2,1, constrained_layout=True)
     #Generating normal labelled dataset for binary classifer
+    print("Generating Binary Data")
+    j = 0
     for i in range(loops):
         for m in mod:
-            for s in range(-20,20,2):
-                dataset[(m, s)] = np.zeros([loops, 2, spv], dtype=np.float64)
+            for s in range(-20,32,2):
                 out = vec(m,s,True)
-                dataset[(m,s)][i,0,:] = np.real(out)
-                dataset[(m,s)][i,1,:] = np.imag(out)
+                dataset[j,:,0] = np.real(out)
+                dataset[j,:,1] = np.imag(out)
+                labels[j,m] = 1
+                snrs[j,:] = s
+                j += 1
                 '''
                 if(s == 18 and m == 1 and i == 0):
                     #print(dataset[(m,s)][i,0,:].shape)
@@ -74,21 +85,36 @@ if __name__ == "__main__":
                 '''
 
     #plt.show()
-    #Generate probability labelled dataset 
+    #Generate probability labelled dataset
+
+    print("Generating P-Value Data")
+    j = 0
     for i in range(int(loops/4)):
         for p in range(0,spv):
-            for s in range (-20,20,2):
-                dataset_p[(p, s)] = np.zeros([int(loops/4), 2, spv], dtype=np.float64)
+            for s in range (-20,32,2):
                 out = vec(p,s,False)
-                dataset_p[(p,s)][i,0,:] = np.real(out)
-                dataset_p[(p,s)][i,1,:] = np.imag(out)
-                #print(p,s)
+                dataset_p[j,:,0] = np.real(out)
+                dataset_p[j,:,1] = np.imag(out)
+                labels_p[j,m] = 1
+                snrs_p[j,:] = s
+                j += 1
 
+    hf_train = h5py.File('qam_train.hdf5', 'w')
+    hf_train.create_dataset('X',data=dataset)
+    hf_train.create_dataset('Y',data=labels)
+    hf_train.create_dataset('Z',data=snrs)
+    print("Written training data")
+
+    hf_train_p = h5py.File('qam_train_p.hdf5', 'w')
+    hf_train_p.create_dataset('X',data=dataset_p)
+    hf_train_p.create_dataset('Y',data=labels_p)
+    hf_train_p.create_dataset('Z',data=snrs_p)
+    print("Written training-p data")
+                
+    print("Successfully written data")
+    hf_train.close()
+    hf_train_p.close()
     print("Writing data to file")
-    pickle.dump( dataset, open("qam_data_test.pkl", "wb" ) )
-    pickle.dump( dataset_p, open("qam_data_p_test.pkl", "wb" ) )
-
-
-       
+    
 
     
