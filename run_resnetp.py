@@ -25,7 +25,7 @@ Classes:
 
 def get_loss_optimizer(net,learning_rate=0.001):
         #Loss
-        loss = torch.nn.CrossEntropyLoss()
+        loss = torch.nn.MSELoss()
         #Optimizer
         optimizer  = optim.Adam(net.parameters(),lr = learning_rate)
         return(loss, optimizer)
@@ -149,9 +149,8 @@ def train_net(train_loader=None, net=None, batch_size=128, n_epochs=5 ,learning_
             optimizer.zero_grad()
             #Forward pass, backward pass, optimize
             outputs = net(inputs.float())
-            labels = labels.squeeze_().cpu()
-            loss_size = loss(outputs.cpu(), np.argmax(labels,axis=1))
-            #loss_size = loss(outputs, np.argmax(labels,axis=1))
+            labels = labels.squeeze_()
+            loss_size = loss(outputs, labels)
             loss_size.backward()
             optimizer.step()
             

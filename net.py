@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-IN_CHAN = 1024
+IN_CHAN = 2048
 
 
 
