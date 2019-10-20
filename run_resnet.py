@@ -30,11 +30,10 @@ def get_loss_optimizer(net,learning_rate=0.001):
         optimizer  = optim.Adam(net.parameters(),lr = learning_rate)
         return(loss, optimizer)
 
-def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a=8,b=12,c=20):  
+def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None):  
 
     n_batches = len(test_loader)
 
-    #net = ResNet18()
     model = torch.load(path)
     net = model['model']
     net.load_state_dict(model['state_dict'])
@@ -53,38 +52,21 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
     corr_cnt = 0
     total_iter = 0
     
-    for i in range(6,10):
-        for j in range(10,16):
-            for k in range(16,24):
-                for data in test_loader:
-                    [inputs,labels,snr] = data
-                    inputs,labels = Variable(inputs).to('cuda'), Variable(labels)
-                    pred = net(inputs.float())
-                    c = 0
-                    if (pred.shape[1] > 4):
-                        c = 1
+    for data in test_loader:
+        [inputs,labels,snr] = data
+        inputs,labels = Variable(inputs).to('cuda'), Variable(labels)
+        pred = net(inputs.float())
 
-                    snr = snr.numpy()
-                    pred = np.argmax(pred.cpu(),axis =1).numpy()
-                    labels = np.argmax(labels.numpy(),axis=1)
-                    
-                    for s,p,l in zip(snr,pred,labels):
-                    #wrt.writerow([s,p,l]) 
-                        if (s < 25):
-                            continue
-                        if(c == 1):
-                            p = bisect.bisect_left([i,j,k],p)
-                        
-                        if(p == l):
-                            corr_cnt += 1
-                        total_iter +=1 
-                    
-                print("Test done, accr = :" + str(corr_cnt/total_iter))
-                print("i" + str(i))
-                print("j" + str(j))
-                print("k" + str(k))
-                wrt.writerow([i,j,k,(corr_cnt/total_iter)])
+        snr = snr.numpy()
+        pred = np.argmax(pred.cpu(),axis =1).numpy()
+        labels = np.argmax(labels.numpy(),axis=1)
+        for s,p,l in zip(snr,pred,labels):
+            #wrt.writerow([s,p,l]) 
+            if(p == l):
+                corr_cnt += 1
+            total_iter +=1         
     
+    print("Test done, accr = :" + str(corr_cnt/total_iter))
     f_out.close()
 
 

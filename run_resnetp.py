@@ -34,7 +34,6 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
 
     n_batches = len(test_loader)
 
-    #net = ResNet18()
     model = torch.load(path)
     net = model['model']
     net.load_state_dict(model['state_dict'])
@@ -52,39 +51,39 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
     #testing metrics
     corr_cnt = 0
     total_iter = 0
-    
-    for i in range(6,10):
-        for j in range(10,16):
-            for k in range(16,24):
+    run_max = 0  
+    for i in range(20,30):
+        for j in range(40,60):
+            for k in range(70,80):
                 for data in test_loader:
                     [inputs,labels,snr] = data
                     inputs,labels = Variable(inputs).to('cuda'), Variable(labels)
                     pred = net(inputs.float())
-                    c = 0
-                    if (pred.shape[1] > 4):
-                        c = 1
-
+                        
                     snr = snr.numpy()
-                    pred = np.argmax(pred.cpu(),axis =1).numpy()
+                    pred = pred.cpu().numpy()
                     labels = np.argmax(labels.numpy(),axis=1)
                     
                     for s,p,l in zip(snr,pred,labels):
-                    #wrt.writerow([s,p,l]) 
-                        if (s < 25):
-                            continue
-                        if(c == 1):
-                            p = bisect.bisect_left([i,j,k],p)
-                        
+                        #wrt.writerow([s,p,l])
+                        #wrt.writerow([p,l])
+                        #p = bisect.bisect_left([0.25,0.5,0.75],p) 
+                        p = bisect.bisect_left([float(i/100),float(j/100),float(k/100)],p)
                         if(p == l):
                             corr_cnt += 1
                         total_iter +=1 
+                
+                acc = corr_cnt/total_iter
+                if (run_max < acc):
+                    run_max = acc
                     
-                print("Test done, accr = :" + str(corr_cnt/total_iter))
-                print("i" + str(i))
-                print("j" + str(j))
-                print("k" + str(k))
-                wrt.writerow([i,j,k,(corr_cnt/total_iter)])
-    
+                print("Test done, accr = :" + str(acc))
+                
+                #print("i" + str(float(i/100)))
+                #print("j" + str(float(j/100)))
+                #print("k" + str(float(k/100)))
+                wrt.writerow([i,j,k,acc])
+    print(run_max) 
     f_out.close()
 
 
@@ -113,7 +112,7 @@ def train_net(train_loader=None, net=None, batch_size=128, n_epochs=5 ,learning_
     total_train_loss = 0
     
     scheduler = StepLR(optimizer, step_size=250, gamma=0.1)
-    net = net.float()
+    net = net.float() 
     net = net.to('cuda')
     #Loop for n_epochs
     for epoch in range(n_epochs):
@@ -149,8 +148,8 @@ def train_net(train_loader=None, net=None, batch_size=128, n_epochs=5 ,learning_
             optimizer.zero_grad()
             #Forward pass, backward pass, optimize
             outputs = net(inputs.float())
-            labels = labels.squeeze_()
-            loss_size = loss(outputs, labels)
+            #labels = labels.squeeze_()
+            loss_size = loss(outputs, labels.float())
             loss_size.backward()
             optimizer.step()
             
@@ -206,7 +205,6 @@ if __name__ == '__main__':
         np.random.seed(2019)
         
         n_ex = data['X'].shape[0]
-        
         #print(n_ex)
         n_train = int(n_ex*(7/8))
 
