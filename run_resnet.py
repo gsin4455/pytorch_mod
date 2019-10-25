@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 import time
-from net import net
+from onet import net
 from vgg import vgg 
 from torch.autograd import Variable
 import numpy as np
@@ -21,7 +21,6 @@ Classes:
 0) 4-QAM,
 1) 8-QAM
 '''
-
 
 def get_loss_optimizer(net,learning_rate=0.001):
         #Loss
@@ -56,7 +55,7 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None):
         [inputs,labels,snr] = data
         inputs,labels = Variable(inputs).to('cuda'), Variable(labels)
         pred = net(inputs.float())
-
+            
         snr = snr.numpy()
         pred = np.argmax(pred.cpu(),axis =1).numpy()
         labels = np.argmax(labels.numpy(),axis=1)
@@ -64,8 +63,9 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None):
             #wrt.writerow([s,p,l]) 
             if(p == l):
                 corr_cnt += 1
+            
             total_iter +=1         
-    
+            
     print("Test done, accr = :" + str(corr_cnt/total_iter))
     f_out.close()
 
@@ -181,13 +181,16 @@ if __name__ == '__main__':
         if args.filts is not None:
             filts = [int(x) for x in args.filts.split(",")]
 
-
+        
+        
         args = parser.parse_args()
         
         file_name = args.file_train 
         data = h5py.File(file_name,'r')
         np.random.seed(2019)
         
+        print(data['Y'].value)
+
         n_ex = data['X'].shape[0]
         
         #print(n_ex)

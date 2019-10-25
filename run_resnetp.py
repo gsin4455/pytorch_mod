@@ -49,12 +49,17 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
     wrt = csv.writer(f_out)
 
     #testing metrics
-    corr_cnt = 0
-    total_iter = 0
-    run_max = 0  
-    for i in range(20,30):
-        for j in range(40,60):
-            for k in range(70,80):
+
+
+    run_max = 0 
+    a = 0
+    b = 0
+    c = 0
+    for i in range(0,20):
+        for j in range(i,20):
+            for k in range(15,16):            
+                total_iter = 0
+                corr_cnt = 0
                 for data in test_loader:
                     [inputs,labels,snr] = data
                     inputs,labels = Variable(inputs).to('cuda'), Variable(labels)
@@ -63,12 +68,12 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
                     snr = snr.numpy()
                     pred = pred.cpu().numpy()
                     labels = np.argmax(labels.numpy(),axis=1)
+                    pred = np.argmax(pred, axis=1)
                     
                     for s,p,l in zip(snr,pred,labels):
                         #wrt.writerow([s,p,l])
                         #wrt.writerow([p,l])
-                        #p = bisect.bisect_left([0.25,0.5,0.75],p) 
-                        p = bisect.bisect_left([float(i/100),float(j/100),float(k/100)],p)
+                        p = bisect.bisect_left([i,j],p) 
                         if(p == l):
                             corr_cnt += 1
                         total_iter +=1 
@@ -76,14 +81,15 @@ def test_net(test_loader = None, path= 'model.pt', batch_size= 128, fname=None,a
                 acc = corr_cnt/total_iter
                 if (run_max < acc):
                     run_max = acc
-                    
+                    a = i
+                    b = j
+                    c = k
                 print("Test done, accr = :" + str(acc))
                 
-                #print("i" + str(float(i/100)))
-                #print("j" + str(float(j/100)))
-                #print("k" + str(float(k/100)))
+                print(str(i) + " " +str(j) + " " + str(k)) 
+                 
                 wrt.writerow([i,j,k,acc])
-    print(run_max) 
+    print(run_max,a,b,c) 
     f_out.close()
 
 
@@ -221,11 +227,12 @@ if __name__ == '__main__':
         if(args.train):
             
             #Training data
-            '''
+            '''        
             model = torch.load(args.model_path)
             nn = model['model']
             nn.load_state_dict(model['state_dict'])
             '''
+
             #nn = ResNet34(args.classes)
             #nn = vgg(filts)
             nn = net(args.classes)
